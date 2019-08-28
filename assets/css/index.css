@@ -42,8 +42,12 @@ ul {
   margin-top: 3em;
 }
 #input button{
-  margin-top: 1em;
+
   background: #f63;
+}
+
+#input .button-paren{
+ margin-top: 1em;
 }
 #input .btn-primary {
   color: #fff;
@@ -73,4 +77,10 @@ label {
   font-weight: bold;
   font-size: 20px;
 }
+
+.modal-header{
+  background-color: #f63;
+  height: 4em;
+}
+
 
