@@ -15,39 +15,40 @@
         <div class="col-sm-3"></div>
         <div class="col-sm-6 text-center">
           <input
-            v-if="!shopInfo"
+            v-if="Object.entries(outputResponse.shopInformation).length === 0 && outputResponse.shopInformation.constructor === Object"
             type="text"
-            v-model="urlShop"
+            v-model="inputRequest.url"
             class="form-control"
             placeholder="Nhập link shop vào đây"
           />
-          <label v-if="shopInfo">{{shopInfo.data.shopName}}</label>
+          <label v-if="!(Object.entries(outputResponse.shopInformation).length === 0 && outputResponse.shopInformation.constructor === Object)">
+            {{this.outputResponse.shopInformation.shopName}}
+          </label>
         </div>
         <div class="col-sm-3"></div>
       </div>
       <div class="row text-center">
         <div class="col-sm-12">
-          <button
-            v-if="!shopInfo"
-            class="btn btn-primary button-paren"
-            v-on:click="register"
-          >Đăng kí nhận like follow</button>
-          <label v-if="shopInfo">Số lượng follow hiện tại: {{shopInfo.data.countFollower}}</label>
+          <button  v-if="Object.entries(outputResponse.shopInformation).length === 0 && outputResponse.shopInformation.constructor === Object" class="btn btn-primary button-paren" v-on:click="register">
+            Đăng kí nhận like follow
+          </button>
+          <label v-if="!(Object.entries(outputResponse.shopInformation).length === 0 && outputResponse.shopInformation.constructor === Object)">
+            Số lượng follow hiện tại: {{outputResponse.shopInformation.countFollower}}
+          </label>
         </div>
       </div>
-      <div class="row text-center" v-if="shopInfo">
+      <div class="row text-center" v-if="!(Object.entries(outputResponse.shopInformation).length === 0 && outputResponse.shopInformation.constructor === Object)">
         <div class="col-sm-12 text-center">
-          <button
-            class="btn btn-primary"
-            v-on:click="addSubAccount"
-            data-toggle="modal"
-            data-target="#myModal"
-          >Thêm tài khoản phụ</button>
+          <button class="btn btn-primary" data-toggle="modal" data-target="#login">
+            Thêm tài khoản phụ
+          </button>
           <button class="btn btn-primary" v-on:click="register">Đăng kí nhận follow</button>
           <button class="btn btn-primary" v-on:click="register">Đăng kí nhận like</button>
         </div>
-        <div class="col-sm-12" v-if="addSubAccount">
-          
+        <div class="col-sm-12" v-if="outputResponse.shopInformation  &&  outputResponse.shopInformation.subAccount && outputResponse.shopInformation.subAccount.length > 0" >
+          <ul v-for="(account, index) in outputResponse.shopInformation.subAccount" v-bind:key="account.id">
+            <li v-bind="index">{{ account.fullname }}</li>
+          </ul>
         </div>
       </div>
       <div class="row" style="margin-top:3em">
@@ -67,7 +68,7 @@
         </div>
       </div>
     </div>
-    <div id="myModal" class="modal fade" role="dialog">
+    <div id="login" class="modal fade" role="dialog">
       <div class="modal-dialog" id="input">
         <!-- Modal content-->
         <div class="modal-content">
@@ -77,15 +78,15 @@
               <h4>Thêm tài khoản</h4>
             </div>
             <div class="col-xs-2">
-              <button type="button" class="close" id="close" data-dismiss="modal">&times;</button>
+              <button type="button" class="close" v-on:click="close" id="close" data-dismiss="modal">&times;</button>
             </div>
           </div>
           <div class="modal-body">
-            <div v-if="objDataLogin.error == 1">
+            <div v-if="!check.clickOtp">
               <div class="form-group">
                 <label for="username">Số điện thoại</label>
                 <input
-                  v-model="username"
+                  v-model="inputRequest.phone"
                   type="username"
                   class="form-control"
                   id="username"
@@ -97,7 +98,7 @@
               <div class="form-group">
                 <label for="exampleInputPassword1">Mật khẩu</label>
                 <input
-                  v-model="password"
+                  v-model="inputRequest.password"
                   type="password"
                   class="form-control"
                   id="password"
@@ -106,11 +107,11 @@
                 />
               </div>
             </div>
-            <div v-if="objDataLogin.error == 0">
+            <div v-if="check.clickOtp">
               <div class="form-group">
                 <label for="exampleInputPassword1">Otp</label>
                 <input
-                  v-model="objDataLogin.data.otp"
+                  v-model="inputRequest.otp"
                   type="text"
                   class="form-control"
                   id="otp"
@@ -121,9 +122,9 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button v-if="objDataLogin.error == 1" v-on:click="getOTP" class="btn btn-primary">Đăng nhập</button>
-            <button v-if="objDataLogin.error == 0" v-on:click="login" class="btn btn-primary">Đăng nhập</button>
-            <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
+            <button v-if="!check.clickOtp" v-on:click="getOTP" class="btn btn-primary">Đăng nhập</button>
+            <button v-if="check.clickOtp" v-on:click="login" class="btn btn-primary">Đăng nhập</button>
+            <button type="button" class="btn btn-primary" v-on:click="close" data-dismiss="modal">Close</button>
           </div>
         </div>
       </div>
@@ -135,83 +136,99 @@ import axios from "axios";
 export default {
   data: function() {
     return {
-      urlShop: "",
-      shopInfo: "",
-      showSubAccount: false,
-      username: "",
-      password: "",
-      objDataLogin: { data: {}, error: 1 },
-      subAccount: []
+      inputRequest: {
+        url:'',
+        phone: '',
+        password:'',
+        otp:''
+      },
+      outputResponse:{
+        shopInformation:{},
+        otp:{},
+        login:{}
+      },
+      check: {
+        clickOtp : false
+      }
     };
   },
   methods: {
     register(e) {
       axios
         .post("http://localhost:1337/api/create-shop", {
-          username: this.urlShop
+          username: this.inputRequest.url
         })
         .then(data => {
-          this.shopInfo = data.data;
+          if(data != null && data.data != null && data.data.error != null && data.data.error == 0){
+            this.outputResponse.shopInformation = data.data.data;
+            return;
+          }
+          return;
         })
         .catch(err => {
           console.log(err);
         });
     },
-    addSubAccount() {
-      this.showSubAccount = true;
-    },
     getOTP() {
-      if (
-        this.username == undefined ||
-        this.username == null ||
-        this.username == "" ||
-        this.password == null ||
-        this.password == undefined ||
-        this.password == ""
-      ) {
+      if (this.inputRequest.phone == null ||  this.inputRequest.phone.trim() == '' || this.inputRequest.password == null || this.inputRequest.password.trim() == ''){
         return;
       }
       axios
         .post("http://localhost:1337/api/get-otp", {
-          phone: this.username,
-          password: this.password
+          phone: this.inputRequest.phone,
+          password: this.inputRequest.password
         })
         .then(data => {
-          console.log(data);
-          this.objDataLogin = data.data;
+          if(data != null && data.data != null && data.data.error != null && data.data.error == 0){
+            this.outputResponse.otp = data.data.data;
+            this.check.clickOtp = !this.check.clickOtp;
+          }
+          return;
         })
         .catch(err => {
           console.log(err);
         });
     },
     login() {
-      if (
-        this.objDataLogin.data.otp == null ||
-        this.objDataLogin.data.otp == undefined ||
-        this.objDataLogin.data.otp == ""
-      ) {
+      if (this.inputRequest.otp == null || this.inputRequest.otp.trim() == ''){
         return;
       }
       axios
         .post("http://localhost:1337/api/login", {
-          cookie: this.objDataLogin.data.cookie,
-          otp: this.objDataLogin.data.otp,
-          token: this.objDataLogin.data.token,
-          shopId: this.shopInfo.data.shopId
+          cookie: this.outputResponse.otp.cookie,
+          otp: this.inputRequest.otp,
+          token: this.outputResponse.otp.token,
+          shopId: this.outputResponse.shopInformation.shopId,
+          id: this.outputResponse.shopInformation.id
         })
         .then(data => {
-          console.log(data);
-          if (data.data.error == 0) {
-            $("#myModal").modal("hide");
+          if (data != null && data.data != null && data.data.error == 0) {
+            // this.outputResponse.login = data.data.data;
+            this.outputResponse.shopInformation = data.data.data;
+            $("#login").modal("hide");
+            return;
           }
-          this.subAccount.push(data.data);
+          return;
         })
         .catch(err => {
           console.log(err);
         });
+    },
+    close(){
+      this.inputRequest = {
+        url:'',
+        phone: '',
+        password:'',
+        otp:''
+      };
+      this.check.clickOtp = false;
     }
   }
 };
+
+function init(){
+
+}
 
 function checkValidateUrl(url) {
   url =
