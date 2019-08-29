@@ -46,7 +46,9 @@
           <button class="btn btn-primary" v-on:click="register">Đăng kí nhận follow</button>
           <button class="btn btn-primary" v-on:click="register">Đăng kí nhận like</button>
         </div>
-        <div class="col-sm-12" v-if="addSubAccount"></div>
+        <div class="col-sm-12" v-if="addSubAccount">
+          
+        </div>
       </div>
       <div class="row" style="margin-top:3em">
         <div class="col-md-1"></div>
@@ -119,7 +121,8 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button v-on:click="login" class="btn btn-primary">Đăng nhập</button>
+            <button v-if="objDataLogin.error == 1" v-on:click="getOTP" class="btn btn-primary">Đăng nhập</button>
+            <button v-if="objDataLogin.error == 0" v-on:click="login" class="btn btn-primary">Đăng nhập</button>
             <button type="button" class="btn btn-primary" data-dismiss="modal">Close</button>
           </div>
         </div>
